@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+
+ <node pkg="apriltag_gui" type="apriltag_gui_node" name="gui" output="screen"/>
+ 
+</launch> 
