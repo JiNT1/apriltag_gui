@@ -1,4 +1,4 @@
-#include "apriltag_gui/Gui.h"
+#include "apriltag_gui/apriltag_gui.h"
 #include <ros/ros.h>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -7,26 +7,45 @@ int main(int argc,char **argv){
 
 	ros::init(argc,argv,"apriltag_gui_node");
 	std::cout<<"ho lanciato il nodo"<<std::endl;
-	Gui gui;
+	AprilTagGui gui;
 	std::cout<<"ho creato un oggetto della classe gui"<<std::endl;
 	if(gui.setup())
 		std::cout<<"tutto bene,sono fuori dal setup"<<std::endl;
 	else
 		std::cout<<"setup fallito"<<std::endl;
-	//cv::imshow("aaaaaaaaaaaaaa",gui.drawRect());
-	//cv::waitKey(0);
+	//cv::imshow("aaaaaaaaaaaaaa",gui.getImage());
+	//cv::waitKey(10);
 	
-  	/*
-	ros::Rate rate(50);
+	
+	
+  	
+	ros::Rate rate(10);
 	while(ros::ok()){
-		cv::imshow("esempio",gui.drawRect());
-		cv::waitKey(40);
+		
+		//cv::imshow("esempio",gui.drawRect());
+		//cv::waitKey(40);
+		//gui.drawRect();
 		ros::spinOnce();
 		rate.sleep();
+		std::cout<<ros::ok()<<std::endl;
 	}
-	ros::shutdown();
+	
+	//ros::shutdown();
+	
+	/*
+	ros::Rate rate(100);
+	ros::AsyncSpinner spinner(0);
+	while(ros::ok()){
+		spinner.start();
+		//cv::imshow("aaaaaaaaaa",gui.drawRect());
+		//cv::waitKey();
+		gui.drawRect();
+		rate.sleep();
+	}
+	
+	ros::waitForShutdown();
 	*/
-	//ros::spinOnce();
+	
 	
 	
 	/*

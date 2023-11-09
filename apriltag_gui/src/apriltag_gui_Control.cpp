@@ -1,153 +1,142 @@
-#include "apriltag_gui/Gui.h"
+#include "apriltag_gui/apriltag_gui.h"
 #include <cv_bridge/cv_bridge.h>
 #include <algorithm>
 
-//Costruttore, inizializzo prima della chiamata a costruttore l'image_trasport
-Gui::Gui() : n("~"),image_transport_(n) 
+/**
+*default constructor
+*it initializes, before constructor, image_transport_
+*/
+AprilTagGui::AprilTagGui() : n("~"),image_transport_(n) 
 {
 
-	this->info_topic = "/hd/camera_info";
-	this->image_topic = "kinect2/hd/image_color";
+	this->info_topic = "/kinect2/hd/camera_info";
+	this->image_topic = "/kinect2/hd/image_color";
 	this->detections_topic = "/tag_detections";
 	this->prob_topic = "/camera_tag_probabilities";
 }
 
-//distruttore
-Gui::~Gui(){}
+/**
+*default destructor
+*/
+AprilTagGui::~AprilTagGui(){}
 
-//riceve l'immagine pubblicata ed effettua la conversione tra immagine ROS a immagine OpenCV
-void Gui::onReceivedImage(const sensor_msgs::ImageConstPtr& msg)
+/**
+*it receives published image and converts from ROS message to OpenCV image
+*
+*@param msg message of sensor_msgs::image type
+*/
+void AprilTagGui::onReceivedImage(const sensor_msgs::ImageConstPtr& msg)
 {
 
-	std::cout<<"viene chiamato la callback per acquisire le immagini"<<std::endl;
+	//std::cout<<"viene chiamato la callback per acquisire le immagini"<<std::endl;
 	
 	cv_bridge::CvImagePtr cv_ptr;
 	// convert ros message image into opencv image
 	cv_ptr = cv_bridge::toCvCopy(msg,"bgr8");//sensor_msgs::image_encodings::BGR8
 	this->opencv_image = cv_ptr->image;
-	
-	std::cout<<"immagine catturata e convertita"<<std::endl;
+	this->flag[0]=true;
+	//cv::imshow("aaaaaaaa",this->opencv_image);
+	//cv::waitKey(10);
+	//std::cout<<"immagine catturata e convertita"<<std::endl;
 };
 
-//ricava le posizioni dei centro degli apriltag 
-void Gui::onReceivedDetectedImage(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg)
-{
-	// viene restituito un array di apriltag ordinati in base all'id
-	std::cout<<"viene chiamato la callback per gli apriltag rilevati"<<std::endl;
-	//recupero tutti i centri dei apriltag rilevati, grazie al messaggio aggiornato con posizione e punti degli angoli dell'apriltag
-	for(int i = 0;i < msg->detections.size();i++){
-		this->positions_2d.push_back(cv::Point(msg->detections[i].center_point[0],msg->detections[i].center_point[1]));
-	}
-	//esempio coordinata x del centro del primo apriltag rilevato
-	//std::cout<<this->positions_2d[0].x<<std::endl;
-}
-
-//estrae i parametri della telecamera  serve?????
-void Gui::onReceivedInfo(const sensor_msgs::CameraInfoConstPtr& msg)
-{
-
-	std::cout<<"viene chiamato la callback per le info"<<std::endl;
-	
-	//R matrice rotazione(in questo caso vettore)
-	std::vector<double> R;
-	R.insert(R.begin(),std::begin(msg->R),std::end(msg->R)); 
-	
-	//D vettore parametri di distorsione
-	std::vector<double> D;
-	D.insert(D.begin(),std::begin(msg->D),std::end(msg->D));
-	
-	//K matrice parametri intriseci della camera
-	std::vector<double> K; 
-	K.insert(K.begin(),std::begin(msg->K),std::end(msg->K)); 
-	
-	//mi serve?????
-	this->intrinsic_params.push_back(R);
-	this->intrinsic_params.push_back(D);
-	this->intrinsic_params.push_back(K);
-}
-
-//ottengo le probabilità di ogni apriltag rilevato
-void Gui::onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg)
-{
-
-	std::cout<<"viene chiamato la callback per le probabilità con i corrispettivi"<<std::endl;
-	for(int i = 0;i<msg->data.size();i+2)
-	{
-		this->ids.push_back(msg->data[i]);
-	}
-	for(int i = 1;i<msg->data.size();i+2)
-	{
-		this->probs.push_back(msg->data[i]);
-	}
-}
-
-
-/*
-void Gui::projection(){
-
-	cv::Mat K_matrix = (cv::Mat_<double>(3,3)<< 
-						this->intrinsic_params[2][0],
-						this->intrinsic_params[2][1],
-						this->intrinsic_params[2][2],
-						this->intrinsic_params[2][3],
-						this->intrinsic_params[2][4],
-						this->intrinsic_params[2][5],
-						this->intrinsic_params[2][6],
-						this->intrinsic_params[2][7],
-						this->intrinsic_params[2][8]);
-	
-	//i paramteri estrinseci da verificare 
-	cv::projectPoints(this->positions_3d,this->intrinsic_params[0],0,K_matrix,this->intrinsic_params[1],this->positions_2d);
-}
+/**
+*get the center positions of each detected apriltag
+*
+*@param msg message which contains an array of detected apriltags
 */
+void AprilTagGui::onReceivedDetectedImage(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg)
+{
+	//std::cout<<"viene chiamato la callback per gli apriltag rilevati"<<std::endl;
+	//to gain every center of detected apriltags
+	if(positions_2d.empty())
+	{
+		setValues(msg->detections.size());
+	}
+	for(int i = 0;i < positions_2d.size();i++)
+	{
+		//this->id_pos[i]=msg->detections[i].id[0];
+		//this->positions_2d[id_pos[i]]=cv::Point(msg->detections[i].center_point[0],msg->detections[i].center_point[1]);
+		this->positions_2d[msg->detections[i].id[0]] = cv::Point(msg->detections[i].center_point[0],msg->detections[i].center_point[1]);
+	}
+	
+	/*for(int i = 0;i<4;i++){
+		std::cout<<msg->detections[i].id[0]<<"   "<<i<<"  "<<positions_2d[i]<<std::endl;
+	}*/
+	this->flag[1] = true;
+	//esempio coordinata x del centro del primo apriltag rilevato
+	//std::cout<<this->positions_2d[0]<<std::endl;
+}
 
-//configuro i vari subscribe
-bool Gui::setup(){
+/**
+*get probabilities of each detected apriltags
+*
+*@param msg array containing ids and their corrisponding proabilities
+*/
+void AprilTagGui::onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg)
+{
 
-	bool check = true;
+	//std::cout<<"viene chiamato la callback per le probabilità con i corrispettivi id"<<std::endl;
+	for(int i = 0,j = 0;i<msg->data.size() && j<this->probs.size();i+=2,j++)
+	{
+		//std::cout<<i<<std::endl;
+		this->id_probs[j] = msg->data[i];
+		this->probs[j] = msg->data[i+1];
+	}
+	this->flag[2] = true;
+	//std::cout<<"pxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0 :"<<this->probs[0]<<std::endl;
+}
+
+/**
+*configure every subscribes
+*
+*@return true if every subscribe succeed, false otherwiser
+*/
+bool AprilTagGui::setup(){
+
+	//bool check = true;
 	std::cout<<"inizio setup"<<std::endl;
 	
-	//listening sul topic camera_info
-	this->sub_info = this->n.subscribe(this->info_topic,1,&Gui::onReceivedInfo,this);
-	if(sub_info == 0)
-	{
-		std::cout<<"error in subscribing to "<<this->info_topic<<std::endl;
-		check = false;
-	}
-	
-	//listening sul topic image_color
-	this->sub_image_transport_ = this->image_transport_.subscribe(this->image_topic,1,&Gui::onReceivedImage,this);
+	//listening on image_color topic
+	this->sub_image_transport_ = this->image_transport_.subscribe(this->image_topic,1,&AprilTagGui::onReceivedImage,this);
 	if(sub_image_transport_ == 0)
 	{
-		std::cout<<"error in subscribing to "<<this->image_topic<<std::endl;
-		check = false;
+		ROS_ERROR("error in subscribing to %s",this->image_topic);
+		//std::cout<<"error in subscribing to "<<this->image_topic<<std::endl;
+		//check = false;
 	}
 		
-	//listening sul topic tag_detections
-	this->sub_detected_image = this->n.subscribe(this->detections_topic,1,&Gui::onReceivedDetectedImage,this);
+	//listening on tag_detections topic
+	this->sub_detected_image = this->n.subscribe(this->detections_topic,1,&AprilTagGui::onReceivedDetectedImage,this);
 	if(sub_detected_image == 0)
 	{
-		std::cout<<"error in subscribing to "<<this->detections_topic<<std::endl;
-		check = false;
+		ROS_ERROR("error in subscribing to %s",this->detections_topic);
+		//std::cout<<"error in subscribing to "<<this->detections_topic<<std::endl;
+		//check = false;
 	}
 	
-	//listening sul topic camera_tag_probabilities
-	this->sub_prob = this->n.subscribe(this->prob_topic,1,&Gui::onReceivedProb,this);
+	//listening on camera_tag_probabilities topic
+	this->sub_prob = this->n.subscribe(this->prob_topic,1,&AprilTagGui::onReceivedProb,this);
 	if(sub_prob == 0)
 	{
-		std::cout<<"error in subscribing to "<<this->prob_topic<<std::endl;
-		check = false;
+		ROS_ERROR("error in subscribing to %s",this->prob_topic);
+		//std::cout<<"error in subscribing to "<<this->prob_topic<<std::endl;
+		//check = false;
 	}
 	
-	std::cout<<"setup terminato"<<std::endl;
-	return check;
+	std::cout<<"setup finished"<<std::endl;
+	return true;
 }
-
-cv::Mat Gui::drawRect(){
+/**
+*drawing a rectangle on the image at the center of each apriltags
+*
+*@return a marked image where the most probable apriltag is highlighted with green and big rectangle and other apriltags are highlighted with red and small rectangle based on their probabilities 
+*/
+cv::Mat AprilTagGui::drawRect(){
 
 	//OpenCV color channel order is B,G,R
-	//verde = cv::Scalar(0,255,0)
-	//rosso = cv::Scalar(0,0,255)
+	//green = cv::Scalar(0,255,0)
+	//red = cv::Scalar(0,0,255)
 	//thickness = 3
 	//markerSize measuring in pixel
 	
@@ -157,31 +146,84 @@ cv::Mat Gui::drawRect(){
 	//cv::drawMarker(marked_img,this->positions_2d[i],cv::Scalar(0,255,0),cv::MARKER_SQUARE,std::round(this->probs[i]),3,8);
 	//return this->opencv_image;
 	
+
+
+
 	cv::Mat marked_img;
-	this->opencv_image.copyTo(marked_img);
 	std::vector<int>::iterator it;
 	
-	//trovo la probabilità massima, quella che avrà il segno verde
-	int max = *std::max_element(this->probs.begin(),this->probs.end());
+	if(this->flag[0] == true)
+	{
+		this->opencv_image.copyTo(marked_img);
+		//finding the max probability, the apriltag with this probability will have green rectangle
+		if(this->flag[1] == true && this->flag[2] == true)
+		{
+			float max = *std::max_element(this->probs.begin(),this->probs.end());
+			//std::cout<<max<<std::endl; 
+			//marking every apriltags
+			//std::cout<<positions_2d[0]<<std::endl; /*TODO: posizione dei centri varia nbel tempo come mai ???????????????????????*/
+			for(int i=0;i<this->positions_2d.size() && i<this->probs.size();i++){
+				//in the array every id is unique, it finds the id based on i
+				it = find(this->id_probs.begin(),this->id_probs.end(),i);
+				//std::cout<<id_probs[i]<<"   "<<probs[i]<<std::endl;
+				//std::cout<<probs[*it]<<std::endl; 
+				//std::cout<<*it<<std::endl;
+				//not at the end, so it finds the id, otherwise it does not find the id 
+				if(it != this->id_probs.end())
+				{
+					//center positions' array is always order, instead probability's array is not order. Choosing the right probability according to the id.
+					cv::drawMarker(marked_img,this->positions_2d[i],(this->probs[i] == max ? cv::Scalar(0,255,0) : cv::Scalar(0,0,255)),cv::MARKER_SQUARE,std::round(this->probs[*it]),3,8);
+					cv::imshow("xxxxxxxxxxxxxxxxx",marked_img);
+					cv::waitKey(10);
+				}
+				else
+					std::cout<<"error finding the right apriltag"<<std::endl;
+			}
+		}
+	}else
+		std::cout<< "not received image "<<std::endl; 
+		
 	
-	//marchio tutti gli apriltag
-	for(int i=0;i<this->positions_2d.size() && i<this->probs.size();i++){
-		//nell'array ogni id di un apriltag è unico, trovo l'id i corrispondente
-		it = find(this->ids.begin(),this->ids.end(),i);
-		//non sono alla fine, ho trovato l'id, altrimenti non ho trovato l'id
-		if(it != this->ids.end())
-			//la posizione dei centri è sempre ordinata, invece quella delle probabilità no. Dunque la scelta della probabilità è effettuata in base all'id.
-			cv::drawMarker(marked_img,this->positions_2d[i],(this->probs[i] == max ? cv::Scalar(0,255,0) : cv::Scalar(0,0,255)),cv::MARKER_SQUARE,std::round(this->probs[*it]),3,8);
-		else
-			std::cout<<"error finding the right apriltag"<<std::endl;
-	}
+
 	return marked_img;
 }
 
-cv::Mat Gui::getImage(){
+/**
+* get the published unmarked image
+*
+*@return image
+*/
+cv::Mat AprilTagGui::getImage()
+{
 
 	return this->opencv_image;
 }
 
+void AprilTagGui::setValues(int size)
+{
+	for(int i=0;i<size;i++){
+		this->positions_2d.push_back(cv::Point2d(0,0));
+		this->id_probs.push_back(0);
+		this->id_pos.push_back(0);
+		this->probs.push_back(0);
+	}
+}
 
+/*
+bool AprilTagGui::setup(){
+	std::cout<<"inizio setup"<<std::endl;
+	this->sub_image.subscribe(this->n,this->image_topic,1,ros::TransportHints().tcpNoDelay());
+	this->sub_detected_image.subscribe(this->n,this->detections_topic,1,ros::TransportHints().tcpNoDelay());
+	this->sub_prob.subscribe(this->n,this->prob_topic,1,ros::TransportHints().tcpNoDelay());
+	typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,apriltag_arm_ros::AprilTagDetectionArray,std_msgs::Float32MultiArray> syncPolicy;
+	message_filters::Synchronizer<syncPolicy> sync(syncPolicy(10),this->sub_image,this->sub_detected_image,this->sub_prob);
+	sync.registerCallback(boost::bind(&AprilTagGui::onReceivedData,_1,_2));
+	std::cout<<"okkkkkkkkkkkkkkkkkkkkkkk"<<std::endl;
+	return true;
+}
+void AprilTagGui::onReceivedData(const sensor_msgs::ImageConstPtr& img,const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& detected_array,const std_msgs::Float32MultiArrayConstPtr& probs_array){
 
+	std::cout<<"fattoooooooooooooooooooo"<<std::endl;
+
+}
+*/
