@@ -8,11 +8,12 @@
 */
 AprilTagGui::AprilTagGui() : n("~"),image_transport_(n) 
 {
-
-	this->info_topic = "/kinect2/hd/camera_info";
 	this->image_topic = "/kinect2/hd/image_color";
 	this->detections_topic = "/tag_detections";
 	this->prob_topic = "/camera_tag_probabilities";
+	this->event_bus_topic = "/event/bus";
+	this->picking = false;
+	this->continueUpdatePos = false;
 }
 
 /**
@@ -29,19 +30,16 @@ void AprilTagGui::onReceivedImage(const sensor_msgs::ImageConstPtr& msg)
 {
 
 	//std::cout<<"viene chiamato la callback per acquisire le immagini"<<std::endl;
-	
 	cv_bridge::CvImagePtr cv_ptr;
 	// convert ros message image into opencv image
 	cv_ptr = cv_bridge::toCvCopy(msg,"bgr8");//sensor_msgs::image_encodings::BGR8
 	this->opencv_image = cv_ptr->image;
 	this->flag[0]=true;
-	//cv::imshow("aaaaaaaa",this->opencv_image);
-	//cv::waitKey(10);
 	//std::cout<<"immagine catturata e convertita"<<std::endl;
 };
 
 /**
-*get the center positions of each detected apriltag
+*set id_pos, position and probability vector
 *
 *@param msg message which contains an array of detected apriltags
 */
@@ -49,23 +47,65 @@ void AprilTagGui::onReceivedDetectedImage(const apriltag_arm_ros::AprilTagDetect
 {
 	//std::cout<<"viene chiamato la callback per gli apriltag rilevati"<<std::endl;
 	//to gain every center of detected apriltags
-	if(positions_2d.empty())
+	if(this->positions_2d.empty())// || msg->detections.size()!=this->n_objects)
 	{
+		//std::cout << "Detected size: " << msg->detections.size() << "Position2d size: " << this->positions_2d.size() << std::endl;
+		setUpdateValues(msg->detections.size(), this->positions_2d.empty());
+		for(int i=0;i<this->n_objects;i++)
+		{
+			this->id_pos[i] = msg->detections[i].id[0];
+		}
+		//std::cout << "New Detected size: " << msg->detections.size() << "New Position2d size: " << this->positions_2d.size() << std::endl;
+		obtainNewPos(msg);
+		return;
+	}
+	if(this->continueUpdatePos == true)
+	{
+		obtainNewPos(msg);
+	}
+	/*
+	if(this->positions_2d.empty())
+	{
+		std::cout << "Detected size: " << msg->detections.size() << "Position2d size: " << this->positions_2d.size() << std::endl;
 		setValues(msg->detections.size());
+		for(int i=0;i<this->n_objects;i++)
+		{
+			this->id_pos[i] = msg->detections[i].id[0];
+		}
+		std::cout << "New Detected size: " << msg->detections.size() << "New Position2d size: " << this->positions_2d.size() << std::endl;
 	}
-	for(int i = 0;i < positions_2d.size();i++)
+	if(msg->detections.size() != this->n_objects)
 	{
-		//this->id_pos[i]=msg->detections[i].id[0];
-		//this->positions_2d[id_pos[i]]=cv::Point(msg->detections[i].center_point[0],msg->detections[i].center_point[1]);
-		this->positions_2d[msg->detections[i].id[0]] = cv::Point(msg->detections[i].center_point[0],msg->detections[i].center_point[1]);
+		updateValues(msg->detections.size());
+		for(int i=0;i<this->n_objects;i++)
+		{
+			this->id_pos[i] = msg->detections[i].id[0];
+		}
 	}
+	*/
 	
-	/*for(int i = 0;i<4;i++){
-		std::cout<<msg->detections[i].id[0]<<"   "<<i<<"  "<<positions_2d[i]<<std::endl;
-	}*/
 	this->flag[1] = true;
-	//esempio coordinata x del centro del primo apriltag rilevato
-	//std::cout<<this->positions_2d[0]<<std::endl;
+}
+
+/**
+*fullfilled positions vector with cenetr of each detected apriltag
+*
+*@param msg message which contains an array of detected apriltags
+*/
+void AprilTagGui::obtainNewPos(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg)
+{
+	for(int i=0;i < this->n_objects;i++)
+	{
+		for(int j=0;j<this->n_objects;j++)
+		{
+			if(msg->detections[i].id[0] == this->id_pos[j])
+			{
+				this->positions_2d[j] = cv::Point(msg->detections[i].center_point[0],msg->detections[i].center_point[1]);
+			}
+		}
+		
+		//this->positions_2d[msg->detections[i].id[0]] = cv::Point(msg->detections[i].center_point[0],msg->detections[i].center_point[1]);
+	}
 }
 
 /**
@@ -77,14 +117,32 @@ void AprilTagGui::onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg)
 {
 
 	//std::cout<<"viene chiamato la callback per le probabilità con i corrispettivi id"<<std::endl;
-	for(int i = 0,j = 0;i<msg->data.size() && j<this->probs.size();i+=2,j++)
+	if(this->flag[1] == true)
 	{
-		//std::cout<<i<<std::endl;
-		this->id_probs[j] = msg->data[i];
-		this->probs[j] = msg->data[i+1];
+		for(int i=0;i<msg->data.size();i+=2)
+		{
+			for(int j=0;j<this->n_objects;j++)
+			{
+				if(msg->data[i] == this->id_pos[j])
+				{
+					this->probs[j] = msg->data[i+1];
+				}
+			}
+		}
+		this->flag[2] = true;
 	}
-	this->flag[2] = true;
-	//std::cout<<"pxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0 :"<<this->probs[0]<<std::endl;
+}
+
+/**
+*get the code to command the graphic user interface
+*
+*@param msg message that contains a code
+*/
+void AprilTagGui::onReceivedEvent(const std_msgs::Int16ConstPtr& msg)
+{
+
+	this->code=msg->data;
+	this->flag[3] = true;
 }
 
 /**
@@ -92,7 +150,8 @@ void AprilTagGui::onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg)
 *
 *@return true if every subscribe succeed, false otherwiser
 */
-bool AprilTagGui::setup(){
+bool AprilTagGui::setup()
+{
 
 	//bool check = true;
 	std::cout<<"inizio setup"<<std::endl;
@@ -123,69 +182,64 @@ bool AprilTagGui::setup(){
 		//std::cout<<"error in subscribing to "<<this->prob_topic<<std::endl;
 		//check = false;
 	}
-	
+
+	//listening on event/bus topic
+	this->sub_event_bus = this->n.subscribe(this->event_bus_topic,1,&AprilTagGui::onReceivedEvent,this);
+	if(sub_event_bus == 0)
+	{
+		ROS_ERROR("error in subscribing to %s",this->event_bus_topic);
+	}
+
 	std::cout<<"setup finished"<<std::endl;
 	return true;
 }
+
 /**
 *drawing a rectangle on the image at the center of each apriltags
+*OpenCV color channel order is B,G,R
+*thickness = 3
+*markerSize measuring in pixel
 *
-*@return a marked image where the most probable apriltag is highlighted with green and big rectangle and other apriltags are highlighted with red and small rectangle based on their probabilities 
+*@param chosen_id chosen_id is used on drawing the rectangle on the position defined by id
 */
-cv::Mat AprilTagGui::drawRect(){
+void AprilTagGui::drawRect(int chosen_id)
+{
 
-	//OpenCV color channel order is B,G,R
-	//green = cv::Scalar(0,255,0)
-	//red = cv::Scalar(0,0,255)
-	//thickness = 3
-	//markerSize measuring in pixel
-	
-	//this->opencv_image = cv::imread(cv::samples::findFile("/home/jintommaso/jin_ws/src/apriltag_gui/src/test.jpeg"),cv::IMREAD_COLOR);
-	// cv::drawMarker(Mat& img,Point position,const Scalar& color,int markerType,int markerSize,int thinckness,int line_type);
-	// markedSize depends on probablities caught by function OnReceviedProb()
-	//cv::drawMarker(marked_img,this->positions_2d[i],cv::Scalar(0,255,0),cv::MARKER_SQUARE,std::round(this->probs[i]),3,8);
-	//return this->opencv_image;
-	
+	cv::Scalar color;
+	//finding the max probability, the apriltag with this probability will have green rectangle
+	//auto min_max = std::minmax_element(this->probs.begin(),this->probs.end());
+	//-------------------------------------------------------------------------
 
-
-
-	cv::Mat marked_img;
-	std::vector<int>::iterator it;
-	
-	if(this->flag[0] == true)
+	//std::cout<< "i:" <<this->id_pos[i] << "	pos:"<<this->positions_2d[i] << "	prob:"<<this->probs[i]<<std::endl;
+	if(this->picking == false)
 	{
-		this->opencv_image.copyTo(marked_img);
-		//finding the max probability, the apriltag with this probability will have green rectangle
-		if(this->flag[1] == true && this->flag[2] == true)
+		//std::cout<<this->picking<<std::endl;
+		//std::cout<<this->id_pos[i]<<std::endl;
+		//std::cout<<this->target_id<<std::endl;
+		if(this->id_pos[chosen_id] == this->target_id)
+			color = this->target_color;
+		else
+			color = this->other_color;
+		cv::drawMarker(this->opencv_image,this->positions_2d[chosen_id],color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[chosen_id]),3);
+	}
+	else
+	{
+		//std::cout<<this->picking<<std::endl;
+		//std::cout<<this->picking_id<<std::endl;
+		//std::cout<<this->target_id<<std::endl;
+		if(chosen_id == this->target_id)
+			color = this->correct_color;
+		else
+			color = this->wrong_color; 
+		//auto it = std::find(this->id_pos.begin(),this->id_pos.end(),float(i));
+		for(int i=0;i<this->n_objects;i++)
 		{
-			float max = *std::max_element(this->probs.begin(),this->probs.end());
-			//std::cout<<max<<std::endl; 
-			//marking every apriltags
-			//std::cout<<positions_2d[0]<<std::endl; /*TODO: posizione dei centri varia nbel tempo come mai ???????????????????????*/
-			for(int i=0;i<this->positions_2d.size() && i<this->probs.size();i++){
-				//in the array every id is unique, it finds the id based on i
-				it = find(this->id_probs.begin(),this->id_probs.end(),i);
-				//std::cout<<id_probs[i]<<"   "<<probs[i]<<std::endl;
-				//std::cout<<probs[*it]<<std::endl; 
-				//std::cout<<*it<<std::endl;
-				//not at the end, so it finds the id, otherwise it does not find the id 
-				if(it != this->id_probs.end())
-				{
-					//center positions' array is always order, instead probability's array is not order. Choosing the right probability according to the id.
-					cv::drawMarker(marked_img,this->positions_2d[i],(this->probs[i] == max ? cv::Scalar(0,255,0) : cv::Scalar(0,0,255)),cv::MARKER_SQUARE,std::round(this->probs[*it]),3,8);
-					cv::imshow("xxxxxxxxxxxxxxxxx",marked_img);
-					cv::waitKey(10);
-				}
-				else
-					std::cout<<"error finding the right apriltag"<<std::endl;
-			}
+			if(chosen_id == id_pos[i])
+				cv::drawMarker(this->opencv_image,this->positions_2d[i],color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[i]),3);
 		}
-	}else
-		std::cout<< "not received image "<<std::endl; 
 		
-	
-
-	return marked_img;
+	}
+	//cv::drawMarker(marked_img,this->positions_2d[i],color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[i]),3);
 }
 
 /**
@@ -199,31 +253,129 @@ cv::Mat AprilTagGui::getImage()
 	return this->opencv_image;
 }
 
-void AprilTagGui::setValues(int size)
+/**
+*set or update position,probability and id vector
+*
+*@param size vector's size
+*@param isSet decides if it need to set probability 
+*/
+void AprilTagGui::setUpdateValues(int size, bool isSet)
 {
-	for(int i=0;i<size;i++){
-		this->positions_2d.push_back(cv::Point2d(0,0));
-		this->id_probs.push_back(0);
-		this->id_pos.push_back(0);
-		this->probs.push_back(0);
+	this->n_objects = size;
+	std::vector<cv::Point2d> temp_pos(size,cv::Point2d(0,0));
+	std::vector<float> temp_id_pos(size,0);
+	this->positions_2d.assign(temp_pos.begin(),temp_pos.end());
+	this->id_pos.assign(temp_id_pos.begin(),temp_id_pos.end());
+
+	if (isSet){
+		std::vector<float> temp_prob(size,1/float(size));
+		this->probs.assign(temp_prob.begin(),temp_prob.end());
 	}
+	//this->id_probs.assign(temp_id_pos.begin(),temp_id_pos.end());
 }
 
+/**
+*throught the received code, getting the id
+*
+*@param value the received code
+*@param buffer default code used to recognize the right id
+*/
+void AprilTagGui::obtain_target(int value,int buffer)
+{
+	if(buffer == this->target_code)
+		this->target_id = value - buffer;
+	if(buffer == this->picking_code)
+		this->picking_id = value -buffer;
+}
+
+/**
+*draw numObjs rectangles
+*
+*@param numObjs number of drawing
+*/
+void AprilTagGui::drawAll(int numObjs)
+{
+		if(numObjs == 1)
+		{
+			drawRect(this->picking_id);
+		}else
+		{
+			//marking every apriltags
+			for(int i=0;i<numObjs;i++)
+			{
+				drawRect(i);
+			}
+		}
+	//cv::imshow("esempio",this->opencv_image);
+	//cv::waitKey(1);
+}
 /*
-bool AprilTagGui::setup(){
-	std::cout<<"inizio setup"<<std::endl;
-	this->sub_image.subscribe(this->n,this->image_topic,1,ros::TransportHints().tcpNoDelay());
-	this->sub_detected_image.subscribe(this->n,this->detections_topic,1,ros::TransportHints().tcpNoDelay());
-	this->sub_prob.subscribe(this->n,this->prob_topic,1,ros::TransportHints().tcpNoDelay());
-	typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,apriltag_arm_ros::AprilTagDetectionArray,std_msgs::Float32MultiArray> syncPolicy;
-	message_filters::Synchronizer<syncPolicy> sync(syncPolicy(10),this->sub_image,this->sub_detected_image,this->sub_prob);
-	sync.registerCallback(boost::bind(&AprilTagGui::onReceivedData,_1,_2));
-	std::cout<<"okkkkkkkkkkkkkkkkkkkkkkk"<<std::endl;
-	return true;
-}
-void AprilTagGui::onReceivedData(const sensor_msgs::ImageConstPtr& img,const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& detected_array,const std_msgs::Float32MultiArrayConstPtr& probs_array){
-
-	std::cout<<"fattoooooooooooooooooooo"<<std::endl;
-
+float AprilTagGui::markedSize(float value, float max, float min)
+{
+	float minOutRange = 20;
+	float maxOutRange = 80;
+	float minInRange = min ;
+	float maxInRange = max;
+	if(value == max && value == min)
+	{
+		return 40.0;
+	}
+	return minOutRange + (value - minInRange) * (maxOutRange - minOutRange) / (maxInRange - minInRange);
 }
 */
+
+/**
+*it begins to execute according to the received code
+* 
+*/
+void AprilTagGui::start()
+{
+	if(flag[0] == true)
+	{
+		if(flag[3] == true)
+		{
+			if(this->code ==  this->start_code)
+			{
+				this->picking = false;
+				//dovevo aggiornare le posizioni ? 
+				for(int i=0;i<this->positions_2d.size();i++)
+				{
+					this->positions_2d.pop_back();
+				}
+				for(int i=0;i<this->probs.size();i++)
+				{
+					this->probs.pop_back();
+				}
+			}
+
+			if(this->code >= this->target_code && this->code < (this->target_code + this->increasing_code))
+			{
+				obtain_target(this->code,this->target_code);
+				this->picking = false;
+				//this->continueUpdatePos = true;
+				if(flag[1]==true)
+				{
+					drawAll(this->n_objects);
+				}
+			}
+
+			if(this->code >= this->picking_code && this->code < (this->picking_code + this->increasing_code))
+			{
+				this->picking = true;
+				obtain_target(this->code,this->picking_code);
+				int onlyOne = 1; //just one element
+				if(flag[1]==true)
+				{
+					drawAll(onlyOne);
+				}
+				
+			}
+			
+		}
+		cv::imshow("esempio",this->opencv_image);
+		cv::waitKey(1);
+
+	}
+
+
+}
