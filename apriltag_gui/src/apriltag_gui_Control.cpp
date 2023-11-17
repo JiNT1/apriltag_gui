@@ -14,6 +14,8 @@ AprilTagGui::AprilTagGui() : n("~"),image_transport_(n)
 	this->event_bus_topic = "/event/bus";
 	this->picking = false;
 	this->continueUpdatePos = false;
+	this->home = false;
+	this->needClear = false;
 }
 
 /**
@@ -36,6 +38,8 @@ void AprilTagGui::onReceivedImage(const sensor_msgs::ImageConstPtr& msg)
 	this->opencv_image = cv_ptr->image;
 	this->flag[0]=true;
 	//std::cout<<"immagine catturata e convertita"<<std::endl;
+	//cv::imshow("esempio",this->opencv_image);
+	//cv::waitKey(1);
 };
 
 /**
@@ -50,7 +54,7 @@ void AprilTagGui::onReceivedDetectedImage(const apriltag_arm_ros::AprilTagDetect
 	if(this->positions_2d.empty())// || msg->detections.size()!=this->n_objects)
 	{
 		//std::cout << "Detected size: " << msg->detections.size() << "Position2d size: " << this->positions_2d.size() << std::endl;
-		setUpdateValues(msg->detections.size(), this->positions_2d.empty());
+		setUpdateValues(msg->detections.size());
 		for(int i=0;i<this->n_objects;i++)
 		{
 			this->id_pos[i] = msg->detections[i].id[0];
@@ -59,7 +63,7 @@ void AprilTagGui::onReceivedDetectedImage(const apriltag_arm_ros::AprilTagDetect
 		obtainNewPos(msg);
 		return;
 	}
-	if(this->continueUpdatePos == true)
+	if(this->continueUpdatePos == true) //funzione per la modalità dinamica 
 	{
 		obtainNewPos(msg);
 	}
@@ -83,7 +87,6 @@ void AprilTagGui::onReceivedDetectedImage(const apriltag_arm_ros::AprilTagDetect
 		}
 	}
 	*/
-	
 	this->flag[1] = true;
 }
 
@@ -117,6 +120,7 @@ void AprilTagGui::onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg)
 {
 
 	//std::cout<<"viene chiamato la callback per le probabilità con i corrispettivi id"<<std::endl;
+	//probabilities without apriltag positions is useless, so it gets probability after getting positions
 	if(this->flag[1] == true)
 	{
 		for(int i=0;i<msg->data.size();i+=2)
@@ -129,7 +133,6 @@ void AprilTagGui::onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg)
 				}
 			}
 		}
-		this->flag[2] = true;
 	}
 }
 
@@ -138,11 +141,11 @@ void AprilTagGui::onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg)
 *
 *@param msg message that contains a code
 */
-void AprilTagGui::onReceivedEvent(const std_msgs::Int16ConstPtr& msg)
+void AprilTagGui::onReceivedEvent(const std_msgs::Int16ConstPtr& msg) /** TODO: message NeuroEvent*/
 {
 
 	this->code=msg->data;
-	this->flag[3] = true;
+	this->flag[2] = true;
 }
 
 /**
@@ -196,9 +199,6 @@ bool AprilTagGui::setup()
 
 /**
 *drawing a rectangle on the image at the center of each apriltags
-*OpenCV color channel order is B,G,R
-*thickness = 3
-*markerSize measuring in pixel
 *
 *@param chosen_id chosen_id is used on drawing the rectangle on the position defined by id
 */
@@ -210,23 +210,15 @@ void AprilTagGui::drawRect(int chosen_id)
 	//auto min_max = std::minmax_element(this->probs.begin(),this->probs.end());
 	//-------------------------------------------------------------------------
 
-	//std::cout<< "i:" <<this->id_pos[i] << "	pos:"<<this->positions_2d[i] << "	prob:"<<this->probs[i]<<std::endl;
-	if(this->picking == false)
+	//std::cout<< "i:" <<this->id_pos[chosen_id] << "	pos:"<<this->positions_2d[chosen_id] << "	prob:"<<this->probs[chosen_id]<<std::endl;
+	if(this->home == true)
 	{
-		//std::cout<<this->picking<<std::endl;
-		//std::cout<<this->id_pos[i]<<std::endl;
-		//std::cout<<this->target_id<<std::endl;
-		if(this->id_pos[chosen_id] == this->target_id)
-			color = this->target_color;
-		else
-			color = this->other_color;
-		cv::drawMarker(this->opencv_image,this->positions_2d[chosen_id],color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[chosen_id]),3);
+		//std::cout<< "i:" <<this->id_pos[chosen_id] << "	pos:"<<this->positions_2d[chosen_id] << "	prob:"<<this->probs[chosen_id]<<std::endl;
+		cv::drawMarker(this->opencv_image,this->positions_2d[chosen_id],this->other_color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[chosen_id]),this->thickness);
 	}
-	else
+	else if(this->picking == true)
 	{
-		//std::cout<<this->picking<<std::endl;
-		//std::cout<<this->picking_id<<std::endl;
-		//std::cout<<this->target_id<<std::endl;
+		//std::cout<< "i:" <<this->id_pos[chosen_id] << "	pos:"<<this->positions_2d[chosen_id] << "	prob:"<<this->probs[chosen_id]<<std::endl;
 		if(chosen_id == this->target_id)
 			color = this->correct_color;
 		else
@@ -235,9 +227,17 @@ void AprilTagGui::drawRect(int chosen_id)
 		for(int i=0;i<this->n_objects;i++)
 		{
 			if(chosen_id == id_pos[i])
-				cv::drawMarker(this->opencv_image,this->positions_2d[i],color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[i]),3);
+				cv::drawMarker(this->opencv_image,this->positions_2d[i],color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[i]),this->thickness);
 		}
-		
+	}
+	else
+	{
+		//std::cout<< "i:" <<this->id_pos[chosen_id] << "	pos:"<<this->positions_2d[chosen_id] << "	prob:"<<this->probs[chosen_id]<<std::endl;
+		if(this->id_pos[chosen_id] == this->target_id)
+			color = this->target_color;
+		else
+			color = this->other_color;
+		cv::drawMarker(this->opencv_image,this->positions_2d[chosen_id],color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[chosen_id]),this->thickness);
 	}
 	//cv::drawMarker(marked_img,this->positions_2d[i],color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[i]),3);
 }
@@ -259,18 +259,15 @@ cv::Mat AprilTagGui::getImage()
 *@param size vector's size
 *@param isSet decides if it need to set probability 
 */
-void AprilTagGui::setUpdateValues(int size, bool isSet)
+void AprilTagGui::setUpdateValues(int size)
 {
 	this->n_objects = size;
 	std::vector<cv::Point2d> temp_pos(size,cv::Point2d(0,0));
 	std::vector<float> temp_id_pos(size,0);
 	this->positions_2d.assign(temp_pos.begin(),temp_pos.end());
 	this->id_pos.assign(temp_id_pos.begin(),temp_id_pos.end());
-
-	if (isSet){
-		std::vector<float> temp_prob(size,1/float(size));
-		this->probs.assign(temp_prob.begin(),temp_prob.end());
-	}
+	std::vector<float> temp_prob(size,1/float(size));
+	this->probs.assign(temp_prob.begin(),temp_prob.end());
 	//this->id_probs.assign(temp_id_pos.begin(),temp_id_pos.end());
 }
 
@@ -293,7 +290,7 @@ void AprilTagGui::obtain_target(int value,int buffer)
 *
 *@param numObjs number of drawing
 */
-void AprilTagGui::drawAll(int numObjs)
+void AprilTagGui::drawAndShow(int numObjs)
 {
 		if(numObjs == 1)
 		{
@@ -306,8 +303,9 @@ void AprilTagGui::drawAll(int numObjs)
 				drawRect(i);
 			}
 		}
-	//cv::imshow("esempio",this->opencv_image);
-	//cv::waitKey(1);
+	std::cout<<"-------------------------------------------------------"<<std::endl;
+	cv::imshow("esempio",this->opencv_image);
+	cv::waitKey(1);
 }
 /*
 float AprilTagGui::markedSize(float value, float max, float min)
@@ -325,50 +323,49 @@ float AprilTagGui::markedSize(float value, float max, float min)
 */
 
 /**
-*it begins to execute according to the received code
+*it begins to execute according to the received event
 * 
 */
 void AprilTagGui::start()
 {
 	if(flag[0] == true)
 	{
-		if(flag[3] == true)
+		if(flag[2] == true && flag[1] == true)
 		{
 			if(this->code ==  this->start_code)
 			{
 				this->picking = false;
-				//dovevo aggiornare le posizioni ? 
-				for(int i=0;i<this->positions_2d.size();i++)
+				this->home = true;
+				//only after a picking, it can return to home positions
+				if(this->needClear == true)
 				{
-					this->positions_2d.pop_back();
+					this->positions_2d.clear();
+					//for(int i=0;i<this->probs.size();i++)
+					//{
+					//	this->probs.pop_back();
+					//}
+					this->needClear = false;
 				}
-				for(int i=0;i<this->probs.size();i++)
-				{
-					this->probs.pop_back();
-				}
+				drawAndShow(this->n_objects);
 			}
 
 			if(this->code >= this->target_code && this->code < (this->target_code + this->increasing_code))
 			{
-				obtain_target(this->code,this->target_code);
 				this->picking = false;
-				//this->continueUpdatePos = true;
-				if(flag[1]==true)
-				{
-					drawAll(this->n_objects);
-				}
+				this->home = false;
+				this->needClear = false;
+				obtain_target(this->code,this->target_code);
+				drawAndShow(this->n_objects);
 			}
 
 			if(this->code >= this->picking_code && this->code < (this->picking_code + this->increasing_code))
 			{
 				this->picking = true;
+				this->home = false;
+				this->needClear = true;
 				obtain_target(this->code,this->picking_code);
 				int onlyOne = 1; //just one element
-				if(flag[1]==true)
-				{
-					drawAll(onlyOne);
-				}
-				
+				drawAndShow(onlyOne);
 			}
 			
 		}

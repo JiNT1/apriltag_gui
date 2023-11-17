@@ -16,8 +16,6 @@ int main(int argc,char **argv){
 	
 	//ros::Rate rate(100);
 	while(ros::ok()){
-		//cv::imshow("esempio",gui.drawRect());
-		//cv::waitKey(10);
 		gui.start();
 		ros::spinOnce();
 		//rate.sleep();
