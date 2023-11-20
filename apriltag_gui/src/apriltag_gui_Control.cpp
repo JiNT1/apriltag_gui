@@ -11,7 +11,7 @@ AprilTagGui::AprilTagGui() : n("~"),image_transport_(n)
 	this->image_topic = "/kinect2/hd/image_color";
 	this->detections_topic = "/tag_detections";
 	this->prob_topic = "/camera_tag_probabilities";
-	this->event_bus_topic = "/event/bus";
+	this->event_bus_topic = "/events/bus";
 	this->picking = false;
 	this->continueUpdatePos = false;
 	this->home = false;
@@ -141,11 +141,17 @@ void AprilTagGui::onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg)
 *
 *@param msg message that contains a code
 */
-void AprilTagGui::onReceivedEvent(const std_msgs::Int16ConstPtr& msg) /** TODO: message NeuroEvent*/
+void AprilTagGui::onReceivedEvent(const rosneuro_msgs::NeuroEventConstPtr& msg)
 {
 
-	this->code=msg->data;
+	this->code=msg->event;
 	this->flag[2] = true;
+}
+
+
+bool AprilTagGui::readyCallback(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res) 
+{
+	return true;
 }
 
 /**
@@ -192,6 +198,10 @@ bool AprilTagGui::setup()
 	{
 		ROS_ERROR("error in subscribing to %s",this->event_bus_topic);
 	}
+
+	this->service_ = this->n.advertiseService<std_srvs::Empty>("gui_ready", AprilTagGui::readyCallback);
+
+
 
 	std::cout<<"setup finished"<<std::endl;
 	return true;
