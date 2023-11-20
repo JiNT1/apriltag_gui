@@ -36,11 +36,11 @@ class AprilTagGui{
 		void onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg);
 		void onReceivedEvent(const std_msgs::Int16ConstPtr& msg);
 		void setUpdateValues(int size);
-		//float markedSize(float value, float max, float min);
 		void obtain_target(int value, int buffer);
-		void drawRect(int pos);/*TODO:trasform a range of probabilities into a markedSize value*/
+		void drawRect(int pos);
 		void drawAndShow(int numObjs);
 		void obtainNewPos(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg);
+		/** TODO: trasform a range of probabilities into a markedSize value/// float markedSize(float value, float max, float min); */
 		
 		
 
