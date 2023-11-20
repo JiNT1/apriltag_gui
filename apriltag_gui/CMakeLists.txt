@@ -16,6 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   apriltag_arm_ros
   std_msgs
+  std_srvs
+  rosneuro_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -119,6 +121,8 @@ catkin_package(
   	geometry_msgs
   	apriltag_arm_ros
   	std_msgs
+  	std_srvs
+  	rosneuro_msgs
 #  DEPENDS system_lib
 )
 
