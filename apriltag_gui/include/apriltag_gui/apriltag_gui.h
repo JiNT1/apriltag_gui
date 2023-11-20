@@ -14,6 +14,8 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/time_synchronizer.h>
 #include <boost/thread/thread.hpp>
+#include "std_srvs/Empty.h"
+#include <rosneuro_msgs/NeuroEvent.h>
 
 class AprilTagGui{
 	public:
@@ -34,13 +36,14 @@ class AprilTagGui{
 		void onReceivedImage(const sensor_msgs::ImageConstPtr& msg);
 		void onReceivedDetectedImage(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg);
 		void onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg);
-		void onReceivedEvent(const std_msgs::Int16ConstPtr& msg);
+		void onReceivedEvent(const rosneuro_msgs::NeuroEventConstPtr& msg);
 		void setUpdateValues(int size);
 		void obtain_target(int value, int buffer);
 		void drawRect(int pos);
 		void drawAndShow(int numObjs);
 		void obtainNewPos(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg);
 		/** TODO: trasform a range of probabilities into a markedSize value/// float markedSize(float value, float max, float min); */
+		bool readyCallback(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
 		
 		
 
@@ -48,6 +51,7 @@ class AprilTagGui{
 		//node
 		ros::NodeHandle n;
 		image_transport::ImageTransport image_transport_; // std::shared_ptr<image....> image_transport_
+		ros::ServiceServer service_;
 		
 		//subscriber
 		image_transport::Subscriber sub_image_transport_;
