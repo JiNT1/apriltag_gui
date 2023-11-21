@@ -4,17 +4,11 @@
 #include <geometry_msgs/Point.h>
 #include <apriltag_arm_ros/AprilTagDetectionArray.h>
 #include <std_msgs/Float32MultiArray.h>
-#include <std_msgs/Int16.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
-
-#include <message_filters/subscriber.h>
-#include <message_filters/synchronizer.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/time_synchronizer.h>
-#include <boost/thread/thread.hpp>
-#include "std_srvs/Empty.h"
+#include <std_srvs/Empty.h>
 #include <rosneuro_msgs/NeuroEvent.h>
 
 class AprilTagGui{
@@ -27,23 +21,24 @@ class AprilTagGui{
 		bool setup();
 		//return original unmodified image
 		cv::Mat getImage();
-		//return marked image
+		//start graphic user interface
 		void start();
-		//void showImage(cv::Mat img);
+		//stop the system
+		bool stop();
 		
 		private:
-		//callback functions
-		void onReceivedImage(const sensor_msgs::ImageConstPtr& msg);
-		void onReceivedDetectedImage(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg);
-		void onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg);
-		void onReceivedEvent(const rosneuro_msgs::NeuroEventConstPtr& msg);
-		void setUpdateValues(int size);
-		void obtain_target(int value, int buffer);
-		void drawRect(int pos);
-		void drawAndShow(int numObjs);
-		void obtainNewPos(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg);
-		/** TODO: trasform a range of probabilities into a markedSize value/// float markedSize(float value, float max, float min); */
-		bool readyCallback(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
+			//callback functions
+			void onReceivedImage(const sensor_msgs::ImageConstPtr& msg);
+			void onReceivedDetectedImage(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg);
+			void onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg);
+			void onReceivedEvent(const rosneuro_msgs::NeuroEventConstPtr& msg);
+
+			void setUpdateValues(int size);
+			void obtain_target(int value, int buffer);
+			void drawRect(int pos);
+			void drawAndShow(int numObjs);
+			void obtainNewPos(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg);
+			bool readyCallback(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
 		
 		
 
@@ -59,7 +54,7 @@ class AprilTagGui{
 		ros::Subscriber sub_prob;
 		ros::Subscriber sub_event_bus;
 		
-		//i topics
+		// topics
 		std::string image_topic;
 		std::string detections_topic;
 		std::string prob_topic;
@@ -76,24 +71,28 @@ class AprilTagGui{
 		
 		//vector of ids
 		std::vector<float> id_pos;
-		//std::vector<int> id_probs;
 
-		//code
+		//event code
 		int increasing_code = 500;
 		int start_code = 0;
 		int picking_code = 1000;
 		int target_code = 5000;
+		int stop_code = -1;
 		int target_id;
 		int picking_id;
 		int code;
-		/// eliminate an object after picking, can use std::vector::erase()
 
 		//picking mode
 		bool picking;
+
 		//home mode
 		bool home;
+
 		//clear position vector after picking
 		bool needClear;
+
+		//finished flag
+		bool finished;
 
 		//OpenCV color channel order is B,G,R
 		// correct = green
@@ -116,7 +115,7 @@ class AprilTagGui{
 		//dinamic use
 		bool continueUpdatePos;
 		
-		//flag[0] for image, flag[1] for center positions, flag[2] event_bus
+		//flag[0] for image, flag[1] for center positions, flag[2] for event
 		bool flag[3] = {false,false,false}; 
 
 };
