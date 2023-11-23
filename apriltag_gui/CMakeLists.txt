@@ -8,6 +8,10 @@ project(apriltag_gui)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package( OpenCV 4 REQUIRED)
+find_package(PkgConfig)
+pkg_search_module(Apriltag REQUIRED apriltag)
+include_directories(${apriltag_INCLUDE_DIRS}/apriltag)
+link_directories(${apriltag_LIBDIR})
 find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   image_transport
@@ -237,3 +241,7 @@ target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME}_Control ${catkin_LIBR
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+if(CMAKE_COMPILER_IS_GNUCXX)
+  target_compile_options(${PROJECT_NAME}_Control PRIVATE -Wno-format) 
+endif()

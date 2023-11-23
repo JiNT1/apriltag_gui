@@ -35,7 +35,7 @@ class AprilTagGui{
 
 			void setUpdateValues(int size);
 			void obtain_target(int value, int buffer);
-			void drawRect(int pos);
+			void drawRect(int pos, cv::Mat& img);
 			void drawAndShow(int numObjs);
 			void obtainNewPos(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg);
 			bool readyCallback(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
@@ -62,6 +62,7 @@ class AprilTagGui{
 		
 		//converted image
 		cv::Mat opencv_image;
+		cv::Mat image_copy;
 
 		//vector of center's positions of each detected apriltags
 		std::vector<cv::Point2d> positions_2d;
