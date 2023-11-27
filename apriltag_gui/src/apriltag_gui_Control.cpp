@@ -9,8 +9,10 @@
 AprilTagGui::AprilTagGui() : n("~"),image_transport_(n) 
 {
 	
-	this->image_topic = "/bci_camera/hd/image_color";
-	this->detections_topic = "/bci_camera/tag_detections";
+	//this->image_topic = "/bci_camera/hd/image_color";
+	//this->detections_topic = "/bci_camera/tag_detections";
+	this->image_topic = "/kinect2/hd/image_color";
+	this->detections_topic = "/tag_detections";
 	this->prob_topic = "/camera_tag_probabilities";
 	this->event_bus_topic = "/events/bus";
 	this->picking = false;
@@ -18,6 +20,7 @@ AprilTagGui::AprilTagGui() : n("~"),image_transport_(n)
 	this->home = false;
 	this->needClear = false;
 	this->finished = false;
+	this->needTarget = false;
 }
 
 /**
@@ -41,7 +44,7 @@ void AprilTagGui::onReceivedImage(const sensor_msgs::ImageConstPtr& msg)
 	this->flag[0]=true;
 	//std::cout<<"immagine catturata e convertita"<<std::endl;
 	this->opencv_image.copyTo(this->image_copy);
-};
+}
 
 /**
 *set id_pos, position and probability vector
@@ -63,13 +66,15 @@ void AprilTagGui::onReceivedDetectedImage(const apriltag_arm_ros::AprilTagDetect
 		}
 		//std::cout << "New Detected size: " << msg->detections.size() << "New Position2d size: " << this->positions_2d.size() << std::endl;
 		obtainNewPos(msg);
+		this->flag[1] = true;
 		return;
 	}
 	if(this->continueUpdatePos == true) //funzione per la modalità dinamica 
 	{
 		obtainNewPos(msg);
+		this->flag[1] = true;
 	}
-	this->flag[1] = true;
+	
 }
 
 /**
@@ -122,6 +127,7 @@ void AprilTagGui::onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg)
 *
 *@param msg message that contains a code
 */
+
 void AprilTagGui::onReceivedEvent(const rosneuro_msgs::NeuroEventConstPtr& msg)
 {
 
@@ -130,6 +136,21 @@ void AprilTagGui::onReceivedEvent(const rosneuro_msgs::NeuroEventConstPtr& msg)
 	this->flag[2] = true;
 }
 
+/*
+void AprilTagGui::onReceivedEvent(const std_msgs::Int16ConstPtr& msg)
+{
+
+	//std::cout<<"ho ricevuto il comando"<<std::endl;
+	this->code=msg->data;
+	this->flag[2] = true;
+}
+*/
+
+/**
+*service to notice client that all subscribes are succeed
+* 
+*@return true when service is created
+*/
 bool AprilTagGui::readyCallback(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res) 
 {
 
@@ -181,41 +202,6 @@ bool AprilTagGui::setup()
 	return true;
 }
 
-/**
-*drawing a rectangle on the image at the center of each apriltags
-*
-*@param chosen_id chosen_id is used on drawing the rectangle on the position defined by id
-*/
-void AprilTagGui::drawRect(int chosen_id, cv::Mat& img)
-{
-
-	cv::Scalar color; 
-
-	if(this->home == true)
-	{
-		cv::drawMarker(img,this->positions_2d[chosen_id],this->other_color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[chosen_id]),this->thickness);
-	}
-	else if(this->picking == true)
-	{
-		if(chosen_id == this->target_id)
-			color = this->correct_color;
-		else
-			color = this->wrong_color; 
-		for(int i=0;i<this->n_objects;i++)
-		{
-			if(chosen_id == id_pos[i])
-				cv::drawMarker(img,this->positions_2d[i],color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[i]),this->thickness);
-		}
-	}
-	else
-	{
-		if(this->id_pos[chosen_id] == this->target_id)
-			color = this->target_color;
-		else
-			color = this->other_color;
-		cv::drawMarker(img, this->positions_2d[chosen_id],color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[chosen_id]),this->thickness);
-	}
-}
 
 /**
 * get the published unmarked image
@@ -265,23 +251,39 @@ void AprilTagGui::obtain_target(int value,int buffer)
 *
 *@param numObjs number of drawing
 */
-void AprilTagGui::drawAndShow(int numObjs)
+void AprilTagGui::draw(bool circle, cv::Mat& img)
 {
 	this->opencv_image.copyTo(this->image_copy);
+    cv::Scalar color;
 
-	if(numObjs == 1)
+	if(this->picking)
 	{
-		drawRect(this->picking_id, this->image_copy);
+		if(this->picking_id == this->target_id)
+			color = this->correct_color;
+		else
+			color = this->wrong_color; 
+		for(int i=0;i<this->n_objects;i++)
+		{
+			if(this->picking_id == this->id_pos[i])
+				cv::drawMarker(img,this->positions_2d[i],color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[i]),this->thickness);
+		}
 	}else
 	{
 		//marking every apriltags
-		for(int i=0;i<numObjs;i++)
+		for(int i=0;i<this->n_objects;i++)
 		{
-			drawRect(i, this->image_copy);
+			color = this->other_color;
+		    cv::drawMarker(img, this->positions_2d[i],this->other_color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[i]),this->thickness);
+			if(circle)
+			{
+                /** TODO: offset e dimensione cerchio*/
+				if(this->target_id == this->id_pos[i])
+				    cv::circle(img,cv::Point2d(this->positions_2d[i].x,this->positions_2d[i].y+this->offset),this->default_circle_radius,this->target_color,cv::FILLED);
+
+			}
 		}
+		
 	}
-	//cv::imshow("esempio",this->opencv_image);
-	//cv::waitKey(1);
 }
 
 /**
@@ -298,44 +300,57 @@ bool AprilTagGui::stop()
 /**
 *it begins to execute according to the received event
 */
+
 void AprilTagGui::start()
 {
 
-	if(flag[0])
+	if(this->flag[0])
 	{
-		if(flag[2] && flag[1])
+		if(this->flag[1] && this->flag[2])
 		{
 			if(this->code ==  this->start_code)
 			{
 				this->picking = false;
-				this->home = true;
+				//this->home = true;
+				//this->needClear = false;
 				//only after a picking, it can return to home positions
-				if(this->needClear == true)
+				if(this->needClear)
 				{
 					this->positions_2d.clear();
 					this->probs.clear();
 					this->needClear = false;
+					this->flag[1] = false;
 				}
-				drawAndShow(this->n_objects);
+				draw(this->needTarget,this->image_copy);
 			}
 
 			if(this->code >= this->target_code && this->code < (this->target_code + this->increasing_code))
 			{
 				this->picking = false;
-				this->home = false;
+				//this->home = false;
 				this->needClear = false;
+				this->needTarget = true;
 				obtain_target(this->code,this->target_code);
-				drawAndShow(this->n_objects);
+				draw(this->needTarget,this->image_copy);
 			}
 
 			if(this->code >= this->picking_code && this->code < (this->picking_code + this->increasing_code))
 			{
 				this->picking = true;
-				this->home = false;
-				this->needClear = true;
+				//this->home = false;
+				this->needClear = true; //////////////////////////////////caso in cui l'evento 1500 non ancora implementato///////////////////////////////////
+				this->needTarget = false;
 				obtain_target(this->code,this->picking_code);
-				int onlyOne = 1; //just one element
-				drawAndShow(onlyOne);
+				draw(this->needTarget,this->image_copy);
+			}
+
+			if(this->code == (this->picking_code + this->increasing_code))
+			{
+				this->picking = false;
+				//this->home = false;
+				this->needClear = true;
+				this->needTarget = false;
+				//draw(this->needTarget,this->image_copy);
 			}
 
 			if(this->code == this->stop_code)
@@ -343,13 +358,18 @@ void AprilTagGui::start()
 				this->finished = true;
 			}	
 		}
-		if(this->code != 0){
+		cv::imshow("BCI",this->image_copy);
+		cv::waitKey(1);
+		/*
+		if(this->code != 0)
+		{
 			cv::imshow("BCI",this->image_copy);
 			cv::waitKey(1);
-		}else if(this->code >= this->picking_code && this->code < (this->picking_code + this->increasing_code)){
-				
+		}else
+		{
+			cv::imshow("BCI",this->opencv_image);
+			cv::waitKey(1);		
 		}
+		*/
 	}
 }
-
-

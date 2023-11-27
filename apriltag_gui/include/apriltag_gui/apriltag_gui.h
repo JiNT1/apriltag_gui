@@ -11,6 +11,8 @@
 #include <std_srvs/Empty.h>
 #include <rosneuro_msgs/NeuroEvent.h>
 
+#include <std_msgs/Int16.h>
+
 class AprilTagGui{
 	public:
 		//constructor 
@@ -32,11 +34,13 @@ class AprilTagGui{
 			void onReceivedDetectedImage(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg);
 			void onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg);
 			void onReceivedEvent(const rosneuro_msgs::NeuroEventConstPtr& msg);
+			//void onReceivedEvent(const std_msgs::Int16ConstPtr& msg);
 
 			void setUpdateValues(int size);
 			void obtain_target(int value, int buffer);
-			void drawRect(int pos, cv::Mat& img);
-			void drawAndShow(int numObjs);
+			void drawRect(int chosen_id, cv::Mat& img);
+			void drawTarget(int chosen_id,cv::Mat& img);
+			void draw(bool circle, cv::Mat& img);
 			void obtainNewPos(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg);
 			bool readyCallback(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
 		
@@ -76,12 +80,14 @@ class AprilTagGui{
 		//event code
 		int increasing_code = 500;
 		int start_code = 0;
-		int picking_code = 1000;
+		int picking_code = 1000; //picking code + increasing code = got the object
 		int target_code = 5000;
 		int stop_code = -1;
 		int target_id;
 		int picking_id;
 		int code;
+
+		float offset = 40;
 
 		//picking mode
 		bool picking;
@@ -109,6 +115,7 @@ class AprilTagGui{
 
 		//default value to draw rectangle with determinate misure in pixel
 		float default_dim_rect = 200.0;
+		float default_circle_radius = 10.0;
 
 		//number of object detected
 		int n_objects;
@@ -118,5 +125,7 @@ class AprilTagGui{
 		
 		//flag[0] for image, flag[1] for center positions, flag[2] for event
 		bool flag[3] = {false,false,false}; 
+
+		bool needTarget;
 
 };
