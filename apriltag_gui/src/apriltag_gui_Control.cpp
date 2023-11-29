@@ -124,7 +124,6 @@ void AprilTagGui::onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg)
 */
 void AprilTagGui::onReceivedEvent(const rosneuro_msgs::NeuroEventConstPtr& msg)
 {
-
 	//std::cout<<"ho ricevuto il comando"<<std::endl;
 	this->code=msg->event;
 	this->flag[2] = true;
@@ -235,7 +234,6 @@ cv::Mat AprilTagGui::getImage()
 */
 void AprilTagGui::setUpdateValues(int size)
 {
-	
 	this->n_objects = size;
 	std::vector<cv::Point2d> temp_pos(size,cv::Point2d(0,0));
 	std::vector<float> temp_id_pos(size,0);
@@ -280,8 +278,6 @@ void AprilTagGui::drawAndShow(int numObjs)
 			drawRect(i, this->image_copy);
 		}
 	}
-	//cv::imshow("esempio",this->opencv_image);
-	//cv::waitKey(1);
 }
 
 /**
@@ -316,7 +312,7 @@ void AprilTagGui::start()
 					this->probs.clear();
 					this->needClear = false;
 				}
-				drawAndShow(this->n_objects);
+				//drawAndShow(this->n_objects);
 			}
 
 			if(this->code >= this->target_code && this->code < (this->target_code + this->increasing_code))
@@ -343,11 +339,11 @@ void AprilTagGui::start()
 				this->finished = true;
 			}	
 		}
-		if(this->code != 0){
+		//if(this->code != 0){
 			cv::imshow("BCI",this->image_copy);
 			cv::waitKey(1);
-		}else if(this->code >= this->picking_code && this->code < (this->picking_code + this->increasing_code)){
-				
-		}
+		//}else if(this->code >= this->picking_code && this->code < (this->picking_code + this->increasing_code)){
+
+		//}
 	}
 }
