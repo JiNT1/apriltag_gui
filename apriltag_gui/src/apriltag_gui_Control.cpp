@@ -319,11 +319,13 @@ void AprilTagGui::start()
 					this->needClear = false;
 					this->flag[1] = false;
 				}
-<<<<<<< HEAD
+
 				//drawAndShow(this->n_objects);
-=======
+
 				draw(this->needTarget,this->image_copy);
->>>>>>> fd08a848c88031b4621d8b37978e3e0846a5160e
+
+				draw(this->needTarget,this->image_copy);
+
 			}
 
 			if(this->code >= this->target_code && this->code < (this->target_code + this->increasing_code))
@@ -360,14 +362,14 @@ void AprilTagGui::start()
 				this->finished = true;
 			}	
 		}
-<<<<<<< HEAD
+
 		//if(this->code != 0){
 			cv::imshow("BCI",this->image_copy);
 			cv::waitKey(1);
 		//}else if(this->code >= this->picking_code && this->code < (this->picking_code + this->increasing_code)){
 
 		//}
-=======
+
 		cv::imshow("BCI",this->image_copy);
 		cv::waitKey(1);
 		/*
@@ -375,12 +377,21 @@ void AprilTagGui::start()
 		{
 			cv::imshow("BCI",this->image_copy);
 			cv::waitKey(1);
+
+		cv::imshow("BCI",this->image_copy);
+		cv::waitKey(1);
+		/*
+		if(this->code != 0)
+		{
+			cv::imshow("BCI",this->image_copy);
+			cv::waitKey(1);
+>>>>>>> fd08a848c88031b4621d8b37978e3e0846a5160e
 		}else
 		{
 			cv::imshow("BCI",this->opencv_image);
 			cv::waitKey(1);		
 		}
 		*/
->>>>>>> fd08a848c88031b4621d8b37978e3e0846a5160e
+
 	}
 }
