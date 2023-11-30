@@ -9,10 +9,10 @@
 AprilTagGui::AprilTagGui() : n("~"),image_transport_(n) 
 {
 	
-	//this->image_topic = "/bci_camera/hd/image_color";
-	//this->detections_topic = "/bci_camera/tag_detections";
-	this->image_topic = "/kinect2/hd/image_color";
-	this->detections_topic = "/tag_detections";
+	this->image_topic = "/bci_camera/hd/image_color";
+	this->detections_topic = "/bci_camera/tag_detections";
+	//this->image_topic = "/kinect2/hd/image_color";
+	//this->detections_topic = "/tag_detections";
 	this->prob_topic = "/camera_tag_probabilities";
 	this->event_bus_topic = "/events/bus";
 	this->picking = false;
@@ -35,7 +35,6 @@ AprilTagGui::~AprilTagGui(){}
 */
 void AprilTagGui::onReceivedImage(const sensor_msgs::ImageConstPtr& msg)
 {
-
 	//std::cout<<"viene chiamato la callback per acquisire le immagini"<<std::endl;
 	cv_bridge::CvImagePtr cv_ptr;
 	// convert ros message image into opencv image
@@ -251,7 +250,7 @@ void AprilTagGui::obtain_target(int value,int buffer)
 */
 void AprilTagGui::draw(bool circle, cv::Mat& img)
 {
-	this->opencv_image.copyTo(this->image_copy);
+	//this->opencv_image.copyTo(this->image_copy);
     cv::Scalar color;
 
 	if(this->picking)
@@ -324,8 +323,6 @@ void AprilTagGui::start()
 
 				draw(this->needTarget,this->image_copy);
 
-				draw(this->needTarget,this->image_copy);
-
 			}
 
 			if(this->code >= this->target_code && this->code < (this->target_code + this->increasing_code))
@@ -370,8 +367,6 @@ void AprilTagGui::start()
 
 		//}
 
-		cv::imshow("BCI",this->image_copy);
-		cv::waitKey(1);
 		/*
 		if(this->code != 0)
 		{
@@ -385,7 +380,6 @@ void AprilTagGui::start()
 		{
 			cv::imshow("BCI",this->image_copy);
 			cv::waitKey(1);
->>>>>>> fd08a848c88031b4621d8b37978e3e0846a5160e
 		}else
 		{
 			cv::imshow("BCI",this->opencv_image);
