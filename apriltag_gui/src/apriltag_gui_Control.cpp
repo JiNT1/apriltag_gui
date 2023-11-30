@@ -130,7 +130,6 @@ void AprilTagGui::onReceivedProb(const std_msgs::Float32MultiArrayConstPtr& msg)
 
 void AprilTagGui::onReceivedEvent(const rosneuro_msgs::NeuroEventConstPtr& msg)
 {
-
 	//std::cout<<"ho ricevuto il comando"<<std::endl;
 	this->code=msg->event;
 	this->flag[2] = true;
@@ -221,7 +220,6 @@ cv::Mat AprilTagGui::getImage()
 */
 void AprilTagGui::setUpdateValues(int size)
 {
-	
 	this->n_objects = size;
 	std::vector<cv::Point2d> temp_pos(size,cv::Point2d(0,0));
 	std::vector<float> temp_id_pos(size,0);
@@ -321,7 +319,13 @@ void AprilTagGui::start()
 					this->needClear = false;
 					this->flag[1] = false;
 				}
+
+				//drawAndShow(this->n_objects);
+
 				draw(this->needTarget,this->image_copy);
+
+				draw(this->needTarget,this->image_copy);
+
 			}
 			*/
 			if((this->code >= this->target_code && this->code < (this->target_code + this->increasing_code)) || this->code == this->continuos_feedback )
@@ -367,6 +371,14 @@ void AprilTagGui::start()
 				this->finished = true;
 			}	
 		}
+
+		//if(this->code != 0){
+			cv::imshow("BCI",this->image_copy);
+			cv::waitKey(1);
+		//}else if(this->code >= this->picking_code && this->code < (this->picking_code + this->increasing_code)){
+
+		//}
+
 		cv::imshow("BCI",this->image_copy);
 		cv::waitKey(1);
 		/*
@@ -374,11 +386,21 @@ void AprilTagGui::start()
 		{
 			cv::imshow("BCI",this->image_copy);
 			cv::waitKey(1);
+
+		cv::imshow("BCI",this->image_copy);
+		cv::waitKey(1);
+		/*
+		if(this->code != 0)
+		{
+			cv::imshow("BCI",this->image_copy);
+			cv::waitKey(1);
+>>>>>>> fd08a848c88031b4621d8b37978e3e0846a5160e
 		}else
 		{
 			cv::imshow("BCI",this->opencv_image);
 			cv::waitKey(1);		
 		}
 		*/
+
 	}
 }
