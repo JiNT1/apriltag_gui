@@ -262,7 +262,14 @@ void AprilTagGui::draw(bool circle, cv::Mat& img)
 		for(int i=0;i<this->n_objects;i++)
 		{
 			if(this->picking_id == this->id_pos[i])
-				cv::drawMarker(img,this->positions_2d[i],color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[i]),this->thickness);
+				cv::drawMarker(img,this->positions_2d[i],color,cv::MARKER_SQUARE,this->dim_rect_min+(this->probs[i]*(this->dim_rect_max-this->dim_rect_min)),this->thickness);
+		}
+	}else if(circle)
+	{
+		for(int i=0;i<this->n_objects;i++)
+		{
+			if(this->target_id == this->id_pos[i])
+				cv::circle(img,cv::Point2d(this->positions_2d[i].x,this->positions_2d[i].y-this->offset),this->default_circle_radius,this->target_color,cv::FILLED);
 		}
 	}else
 	{
@@ -270,16 +277,8 @@ void AprilTagGui::draw(bool circle, cv::Mat& img)
 		for(int i=0;i<this->n_objects;i++)
 		{
 			color = this->other_color;
-		    cv::drawMarker(img, this->positions_2d[i],this->other_color,cv::MARKER_SQUARE,this->default_dim_rect*(this->probs[i]),this->thickness);
-			if(circle)
-			{
-                /** TODO: offset e dimensione cerchio*/
-				if(this->target_id == this->id_pos[i])
-				    cv::circle(img,cv::Point2d(this->positions_2d[i].x,this->positions_2d[i].y+this->offset),this->default_circle_radius,this->target_color,cv::FILLED);
-
-			}
+		    cv::drawMarker(img, this->positions_2d[i],this->other_color,cv::MARKER_SQUARE,this->dim_rect_min+(this->probs[i]*(this->dim_rect_max-this->dim_rect_min)),this->thickness);
 		}
-		
 	}
 }
 
@@ -305,6 +304,7 @@ void AprilTagGui::start()
 	{
 		if(this->flag[1] && this->flag[2])
 		{
+			/* caso 0 non più utile
 			if(this->code ==  this->start_code)
 			{
 				this->picking = false;
@@ -324,22 +324,25 @@ void AprilTagGui::start()
 				draw(this->needTarget,this->image_copy);
 
 			}
-
-			if(this->code >= this->target_code && this->code < (this->target_code + this->increasing_code))
+			*/
+			if((this->code >= this->target_code && this->code < (this->target_code + this->increasing_code)) || this->code == this->continuos_feedback )
 			{
 				this->picking = false;
-				//this->home = false;
 				this->needClear = false;
-				this->needTarget = true;
+				this->needTarget = false;
 				obtain_target(this->code,this->target_code);
 				draw(this->needTarget,this->image_copy);
+				if(this->code == this->continuos_feedback)
+				{
+					this->needTarget = true;
+					draw(this->needTarget,this->image_copy);
+				}
 			}
 
 			if(this->code >= this->picking_code && this->code < (this->picking_code + this->increasing_code))
 			{
 				this->picking = true;
-				//this->home = false;
-				this->needClear = true; //////////////////////////////////caso in cui l'evento 1500 non ancora implementato///////////////////////////////////
+				this->needClear = true;
 				this->needTarget = false;
 				obtain_target(this->code,this->picking_code);
 				draw(this->needTarget,this->image_copy);
@@ -348,10 +351,16 @@ void AprilTagGui::start()
 			if(this->code == (this->picking_code + this->increasing_code))
 			{
 				this->picking = false;
-				//this->home = false;
-				this->needClear = true;
 				this->needTarget = false;
-				//draw(this->needTarget,this->image_copy);
+				if(this->needClear)
+				{
+					this->probs.clear();
+					this->id_pos.clear();
+					this->positions_2d.clear();
+					this->needClear = false;
+					this->flag[1] = false;
+				}
+				draw(this->needTarget,this->image_copy);
 			}
 
 			if(this->code == this->stop_code)

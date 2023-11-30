@@ -82,7 +82,8 @@ class AprilTagGui{
 		int start_code = 0;
 		int picking_code = 1000; //picking code + increasing code = got the object
 		int target_code = 5000;
-		int stop_code = -1;
+		int continuos_feedback = 781;
+		int stop_code = 9999;
 		int target_id;
 		int picking_id;
 		int code;
@@ -114,8 +115,9 @@ class AprilTagGui{
 		int thickness = 3;
 
 		//default value to draw rectangle with determinate misure in pixel
-		float default_dim_rect = 200.0;
-		float default_circle_radius = 10.0;
+		float dim_rect_min = 20.0;
+		float dim_rect_max = 150.0;
+		float default_circle_radius = 15.0;
 
 		//number of object detected
 		int n_objects;
