@@ -83,7 +83,7 @@ class AprilTagGui{
 		int picking_code = 1000; //picking code + increasing code = got the object
 		int target_code = 5000;
 		int continuos_feedback = 781;
-		int stop_code = -1;
+		int stop_code = 9999;
 		int target_id;
 		int picking_id;
 		int code;
