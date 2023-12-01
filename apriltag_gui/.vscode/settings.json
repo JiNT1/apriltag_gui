@@ -1,0 +1,12 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/iaslab/ROS_ws/cBCI_ws/devel/lib/python3/dist-packages",
+        "/home/iaslab/ROS_ws/common_ws/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/iaslab/ROS_ws/cBCI_ws/devel/lib/python3/dist-packages",
+        "/home/iaslab/ROS_ws/common_ws/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ]
+}

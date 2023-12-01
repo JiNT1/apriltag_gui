@@ -248,7 +248,7 @@ void AprilTagGui::obtain_target(int value,int buffer)
 *
 *@param numObjs number of drawing
 */
-void AprilTagGui::draw(bool circle, cv::Mat& img)
+void AprilTagGui::draw(cv::Mat& img)
 {
 	//this->opencv_image.copyTo(this->image_copy);
     cv::Scalar color;
@@ -264,13 +264,6 @@ void AprilTagGui::draw(bool circle, cv::Mat& img)
 			if(this->picking_id == this->id_pos[i])
 				cv::drawMarker(img,this->positions_2d[i],color,cv::MARKER_SQUARE,this->dim_rect_min+(this->probs[i]*(this->dim_rect_max-this->dim_rect_min)),this->thickness);
 		}
-	}else if(circle)
-	{
-		for(int i=0;i<this->n_objects;i++)
-		{
-			if(this->target_id == this->id_pos[i])
-				cv::circle(img,cv::Point2d(this->positions_2d[i].x,this->positions_2d[i].y-this->offset),this->default_circle_radius,this->target_color,cv::FILLED);
-		}
 	}else
 	{
 		//marking every apriltags
@@ -278,8 +271,22 @@ void AprilTagGui::draw(bool circle, cv::Mat& img)
 		{
 			color = this->other_color;
 		    cv::drawMarker(img, this->positions_2d[i],this->other_color,cv::MARKER_SQUARE,this->dim_rect_min+(this->probs[i]*(this->dim_rect_max-this->dim_rect_min)),this->thickness);
+			drawCircle(img);
 		}
 	}
+
+}
+
+void AprilTagGui::drawCircle(cv::Mat& img)
+{
+
+	for(int i=0;i<this->n_objects;i++)
+	{
+		if(this->target_id == this->id_pos[i])
+			cv::circle(img,cv::Point2d(this->positions_2d[i].x,this->positions_2d[i].y-this->offset),this->default_circle_radius,this->target_color,cv::FILLED);
+	}
+
+
 }
 
 /**
@@ -304,7 +311,8 @@ void AprilTagGui::start()
 	{
 		if(this->flag[1] && this->flag[2])
 		{
-			/* caso 0 non più utile
+			// caso 0 non più utile
+			/*
 			if(this->code ==  this->start_code)
 			{
 				this->picking = false;
@@ -325,42 +333,44 @@ void AprilTagGui::start()
 
 			}
 			*/
-			if((this->code >= this->target_code && this->code < (this->target_code + this->increasing_code)) || this->code == this->continuos_feedback )
+			if(this->code >= this->target_code && this->code < (this->target_code + this->increasing_code))
 			{
 				this->picking = false;
 				this->needClear = false;
-				this->needTarget = false;
 				obtain_target(this->code,this->target_code);
-				draw(this->needTarget,this->image_copy);
-				if(this->code == this->continuos_feedback)
-				{
-					this->needTarget = true;
-					draw(this->needTarget,this->image_copy);
-				}
+				drawCircle(this->image_copy);
 			}
+
+
+			if(this->code == this->continuos_feedback )
+			{
+				this->picking = false;
+				this->needClear = false;
+				drawCircle(this->image_copy);
+				draw(this->image_copy);
+
+			}
+
 
 			if(this->code >= this->picking_code && this->code < (this->picking_code + this->increasing_code))
 			{
 				this->picking = true;
 				this->needClear = true;
-				this->needTarget = false;
 				obtain_target(this->code,this->picking_code);
-				draw(this->needTarget,this->image_copy);
+				draw(this->image_copy);
 			}
 
 			if(this->code == (this->picking_code + this->increasing_code))
 			{
 				this->picking = false;
-				this->needTarget = false;
-				if(this->needClear)
-				{
+				//if(this->needClear)
+				//{
 					this->probs.clear();
 					this->id_pos.clear();
 					this->positions_2d.clear();
 					this->needClear = false;
 					this->flag[1] = false;
-				}
-				draw(this->needTarget,this->image_copy);
+				//}
 			}
 
 			if(this->code == this->stop_code)

@@ -40,9 +40,10 @@ class AprilTagGui{
 			void obtain_target(int value, int buffer);
 			void drawRect(int chosen_id, cv::Mat& img);
 			void drawTarget(int chosen_id,cv::Mat& img);
-			void draw(bool circle, cv::Mat& img);
+			void draw(cv::Mat& img);
 			void obtainNewPos(const apriltag_arm_ros::AprilTagDetectionArrayConstPtr& msg);
 			bool readyCallback(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
+			void drawCircle(cv::Mat& img);
 		
 		
 
@@ -88,7 +89,7 @@ class AprilTagGui{
 		int picking_id;
 		int code;
 
-		float offset = 40;
+		float offset = 60;
 
 		//picking mode
 		bool picking;
@@ -115,8 +116,8 @@ class AprilTagGui{
 		int thickness = 3;
 
 		//default value to draw rectangle with determinate misure in pixel
-		float dim_rect_min = 20.0;
-		float dim_rect_max = 150.0;
+		float dim_rect_min = 10.0;
+		float dim_rect_max = 80.0;
 		float default_circle_radius = 15.0;
 
 		//number of object detected
